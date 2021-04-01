@@ -1,0 +1,411 @@
+---
+title: "Heteroscedasticidad"
+author: "José C. Pernías"
+date: "3/24/2021"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+set.seed(54321)
+```
+
+# Naturaleza del problema
+
+## Varianza condicional
+
+La varianza condicional del término de error no es constante:
+$$E(u_i^2|x_{1i}, x_{2i}, \dots, x_{ki}) = \sigma^2_i$$
+y, en general, $\sigma^2_i \neq \sigma^2_j$, cuando $i \neq j$.
+
+## Ejemplo 1 (I)
+
+Simulemos una función de regresión poblacional donde la varianza del término de error crece con $x$:
+$$
+\begin{gather*}
+y = \beta_0 + \beta_1 x + u \\
+u \sim N(0, \sigma^2 x^2)
+\end{gather*}
+$$
+Haciendo $\beta_0 = \beta_1 = 1$ y $\sigma^2 = 1$:
+```{r}
+N <- 500
+x <- runif(N, min = 10, max = 250)
+varu <-  x^2
+u <- rnorm(N, sd = sqrt(varu))
+y <- 1 + x + u
+```
+
+## Ejemplo 1 (II)
+```{r}
+library(ggplot2)
+qplot(x, u) 
+```
+
+# Consecuencias de la heteroscedasticidad
+
+## Insesgadez
+
+- La heteroscedasticidad no afecta al supuesto **RLM.4**.
+- El estimador MCO sigue siendo insesgado. 
+
+## Eficiencia
+
+- Se incumple el supuesto **RLM.5**.
+- MCO no es el estimador lineal insesgado óptimo.
+
+## Inferencia
+
+- Las fórmulas usuales para la varianza de los estimadores MCO no son válidas bajo heteroscedasticidad.
+
+## Ejemplo 1 (III) {.smaller}
+
+Estimación MCO:
+```{r}
+mod1 <- lm(y ~ x)
+summary(mod1)
+```
+
+# Inferencia robusta a la heteroscedasticidad
+
+## Errores típicos robustos
+
+Una alternativa común es:
+
+- Estimar los parámetros por MCO.
+
+- Modificar el cálculo de los errores típicos de los estimadores.
+
+## Ejemplo 1 (IV) 
+
+Utilizamos dos paquetes de R:
+
+- `sandwich`: cáclulo de errores típicos robustos:
+```{r}
+# install.packages("sandwich")
+library(sandwich)
+```
+
+- `ec1027`: datos y funciones para la asignatura:
+```{r}
+# install.packages("devtools")
+# devtools::install_github("jcpernias/ec1027")
+library(ec1027)
+```
+
+## Ejemplo 1 (V) { .smaller }
+```{r}
+coef_table(mod1, vce = vcovHC)
+```
+
+## Ejemplo 1 (VI)
+
+Comparamos los errores típicos MCO con los robustos:
+```{r}
+se_mco <- se(mod1)
+se_hc <- se(mod1, vcovHC)
+cmp <- cbind(MCO = se_mco, HC = se_hc, "MCO / HC" = se_mco / se_hc)
+round(cmp, 3)
+```
+
+# Contrastes de heteroscedasticidad
+
+## ¿Por qué?
+
+- ¿Es necesario usar errores típicos robustos?
+
+- ¿Es necesario usar estimadores más eficientes que MCO?
+
+## Contraste de White (I)
+
+Halbert White muestra que hay problemas con MCO cuando la varianza condicional depende de:
+
+- Las variables explicativas: $x_1, x_2, \dots, x_k$.
+
+- Los cuadrados de las variables explicativas: $x^2_1, x^2_2, \dots, x^2_k$.
+
+- Los productos cruzados: $x_1 \cdot x_2, x_1 \cdot x_3, \dots$ 
+
+## Contraste de White (II)
+
+Propone un contraste basado en una regresión auxiliar de los residuos MCO al cuadrado sobre las explicativas, sus cuadrados y sus productos cruzados:
+
+Para contrastar la hipótesis nula se puede usar:
+
+- El estadístico LM: $N R^2$.
+- El estadístico $F$ para contrastar la significación conjunta de la regresión auxiliar.
+
+## Ejemplo 2 (I)
+
+Modelo de determinación de los precios de venta de las casas:
+$$
+price = \beta_0 + \beta_1 sqrft + \beta_2 lotsize + \beta_3 bdrms + u
+$$
+
+## Ejemplo 2 (II) {.smaller}
+
+Estimación por MCO:
+```{r}
+mod2 <- lm(price ~ sqrft + lotsize + bdrms, data = hprice1)
+coef_table(mod2)
+```
+
+## Ejemplo 2 (III) {.smaller}
+
+Versión F del contraste de White:
+```{r}
+white_test(mod2)
+```
+
+## Ejemplo 2 (IV) {.smaller}
+
+Versión LM del contraste de White:
+```{r}
+white_test(mod2, chisq = TRUE)
+```
+
+## Contraste de White (III)
+
+En la regresión auxiliar del contraste de White hay un gran número de parámetros. Esto puede provocar que el contraste de White tenga poca **potencia** (capacidad de detectar heteroscedasticidad cuando realmente está presente).
+
+## Contraste de White (IV)
+
+Para mitigar ese problema, en ocasiones se omiten los productos cruzados en la regresión auxiliar.
+
+## Ejemplo 2 (V) {.smaller}
+
+Versión F del contraste de White, sin incluir productos cruzados:
+```{r}
+white_test(mod2, full = FALSE)
+```
+
+## Otros contrastes
+
+La heteroscedasticidad puede contrastarse mediante una regresión auxiliar de los residuos MCO al cuadrado sobre un conjunto de variables que estén relacionadas con la varianza del término de error. Puede usarse:
+
+- El estadítico LM.
+
+- El contraste $F$ de significación conjunta.
+
+## Ejemplo 2 (VI) {.smaller}
+
+Versión F de un contraste de heteroscedasticidad usando todas las explicativas:
+```{r}
+het_test(mod2)
+```
+
+
+## Ejemplo 2 (VII) {.smaller}
+
+Versión F de un contraste de heteroscdasticidad usando `sqrft` y `lotsize`:
+```{r}
+het_test(mod2, ~ sqrft + lotsize)
+```
+
+## Ejemplo 2 (VIII) {.smaller}
+
+Wooldridge propone usar las prediciones MCO en niveles y al cuadrado:
+```{r}
+yhat2 <- fitted(mod2)
+sq_yhat2 <- yhat2^2
+het_test(mod2, ~ yhat2 + sq_yhat2)
+```
+
+# Estimación eficiente
+
+## Mínimos cuadrados generalizados (MCG)
+
+La idea detrás de MCG es:
+
+1. Transformar el modelo de forma que se cumplan los supuestos de Gauss-Markov.
+
+2. Aplicar MCO al modelo transformado.
+
+
+## Mínimos cuadrados ponderados (I)
+
+- Función de regresión poblacional:
+$$ y_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + u_i $$
+- Consideremos el caso en que:
+$$ V(u_i | x_{1i}, x_{2i}) = E(u_i^2 | x_{1i}, x_{2i}) = \sigma^2 x^2_{2i} $$
+
+## Mínimos cuadrados ponderados (II)
+
+- Transformación del modelo: dividimos por $x_{2i}$:
+$$ \frac{y_i}{x_{2i}} = \beta_0 \frac{1}{x_{2i}}+ \beta_1 \frac{x_{1i}}{x_{2i}} + \beta_2 \frac{x_{2i}}{x_{2i}} + \frac{u_i}{x_{2i}} $$
+
+- Reescribimos el modelo como:
+$$ y^*_i = \beta_2 + \beta_0 x^*_{0i} + \beta_1 x^*_{1i} + u^*_i $$
+donde $y^*_i = y_i / x_{2i}$, $x^*_{0i} = 1 / x_{2i}$, $x^*_{1i} = x_{1i} / x_{2i}$, $u^*_i = u_i / x_{2i}$.
+
+## Mínimos cuadrados ponderados (II)
+
+- El término de error del modelo transformado es homoscedástico:
+$$
+\begin{align*}
+E(u^*_i{}^2| x_{1i}, x_{2i}) &= E((u_i/x_{2i})^2|x_{1i}, x_{2i}) \\ 
+&= (1/x_{2i})^2E(u_i^2| x_{1i}, x_{2i}) \\
+&= (1/x^2_{2i}) \sigma^2 x_{2i}^2 \\
+&= \sigma^2
+\end{align*}
+$$
+
+- El estimador ELIO consiste en aplicar MCO al modelo transformado.
+
+## Mínimos cuadrados ponderados (III)
+
+Resumen:
+
+- La varianza del término de error es proporcional a $h_i$ que es una función conocida de variables observables:
+$$ V(u_i | x_{1i}, x_{2i}, \dots, x_{ki}) = \sigma^2 h_{i} $$
+
+- Transformamos el modelo dividiendo todas las variables (y el término constante) por $\sqrt{h_i}$.
+
+- Estimamos el modelo transformado por MCO.
+
+## Ejemplo 2 (IX)
+
+Volvemos a nuestro modelo de determinación de los precios de venta de las casas:
+$$
+price = \beta_0 + \beta_1 sqrft + \beta_2 lotsize + \beta_3 bdrms + u
+$$
+Supongamos que la varianza condicional de $u_i$ es proporcional al cuadrado de la variable $lotsize$:
+$$ E(u^2_i | sqrft_i, lotsize_i, bdrms_i) = \sigma^2 lotsize_i^2 $$
+por lo que, en este caso $h_i = lotsize_i^2$.
+
+## Ejemplo 2 (X) {.smaller}
+
+En `R` para obtener el estimador MCP utilizamos la opción `weights` de la función `lm`. Indicamos la inversa de la función de dispersión $h_i$.
+```{r}
+hprice1$h <- hprice1$lotsize^2
+mcp <- lm(price ~ sqrft + lotsize + bdrms, data = hprice1, weights = 1 / h)
+coef_table(mcp)
+```
+
+## MCP factibles (I)
+
+- Hasta ahora hemos supuesto que conocemos $h_i$.
+
+- ¿Qué podemos hacer si no observamos $h_i$?
+
+## MCP factibles (II)
+
+- Función de regresión poblacional:
+$$ y_i = \beta_0 + \beta_1 x_{1i} + \beta_2 x_{2i} + u_i $$
+- Consideremos ahora el caso en que:
+$$ E(u_i^2 | x_{1i}, x_{2i}) = \sigma^2 \exp(\delta_0 + \delta_1 x_{2i} + \delta_2 x^2_{2i}) $$
+La función de dispersión depende de parámetros desconocidos:
+$$ h_i =\exp(\delta_0 + \delta_1 x_{2i} + \delta_2 x^2_{2i}) $$
+
+## MCP factibles (III)
+
+- Para aplicar el principio de MCG primero debemos estimar los parámetros de los que depende $h_i$ y obtener una estimación de la función de dispersión,  $\hat{h}_i$.
+
+- Transformamos el modelo dividiendo por $\sqrt{\hat{h}_i}$.
+
+- Aplicamos MCO al modelo transformado.
+
+## Estimación de $h_i$ (I)
+
+- Varianza condicional:
+$$ E(u_i^2 | x_{1i}, x_{2i}) = \sigma^2 \exp(\delta_0 + \delta_1 x_{2i} + \delta_2 x^2_{2i}) $$
+
+- A partir de la ecuación anterior, podemos escribir:
+$$ u_i^2 = \sigma^2 \exp(\delta_0 + \delta_1 x_{2i} + \delta_2 x^2_{2i}) v_i $$
+
+- Tomando logaritmos:
+$$ \log(u_i^2) = \theta_0 + \delta_1 x_{2i} + \delta_2 x^2_{2i} + e_i $$
+
+## Estimación de $h_i$ (II)
+
+- Estimamos los parámetros de:
+$$ \log(u_i^2) = \theta_0 + \delta_1 x_{2i} + \delta_2 x^2_{2i} + e_i $$
+reemplazando $u_i$ por los residuos de mínimos cuadrados, $\hat{u}_i$
+
+- Finalmente obtenemos $\hat{h}_i$ tomando la exponencial de los valores predichos en la regresión anterior.
+
+## Ejemplo 2 (XI)
+
+Determinación de los precios de venta de las casas:
+$$
+price = \beta_0 + \beta_1 sqrft + \beta_2 lotsize + \beta_3 bdrms + u
+$$
+Suponemos ahora que la varianza condicional de $u_i$ es proporcional al cuadrado de la variable $lotsize$:
+$$
+\begin{multline}
+E(u^2_i | sqrft_i, lotsize_i, bdrms_i) = \\ \sigma^2 \exp(\delta_0 + \delta_1 lotsize_i + \delta_2 lotsize_i^2) 
+\end{multline}
+$$
+
+## Ejemplo 2 (XII) {.smaller}
+
+- Estimamos por MCO y guardamos los residuos:
+```{r}
+mod2 <- lm(price ~ sqrft + lotsize + bdrms, data = hprice1)
+uhat2 <- resid(mod2)
+```
+
+- Calculamos el logaritmo de los cuadrados de los residuos, el cuadrado de $lotsize$ y estimamos la regresión auxiliar:
+```{r}
+lsq_uhat2 <- log(uhat2^2)
+sq_lotsize <- hprice1$lotsize^2
+aux <- lm(lsq_uhat2 ~ lotsize + sq_lotsize, data = hprice1)
+```
+
+- Calculamos la estimación de $h_i$:
+```{r}
+hhat <- exp(fitted(aux))
+```
+
+## Ejemplo 2 (XII) {.smaller}
+
+- Finalmente, utilizamos $\hat{h}_i$ para transformar el modelo. El estimador de MCP factibles sería:
+```{r}
+mcpf <- lm(price ~ sqrft + lotsize + bdrms, data = hprice1, weights = 1 / hhat)
+coef_table(mcpf)
+```
+
+## Comparación con MCO
+
+- MCP y MCO son insesgados bajo heteroscedasticidad. No debería haber una gran diferencia entre ambas estimaciones.
+
+- No son comparables los coeficientes de determinación y el error típico de la regresión de MCO y MCP.
+
+- Igual que con MCO, es posible usar matrices de covarianzas robustas después de estimar por MCP.
+
+## Alternativas a MCP
+
+- La heteroscedasticidad suele estar asociada con el "tamaño" de las observaciones.
+
+- Con frecuencia, los problemas de heteroscedasticidad pueden mitigarse usando logaritmos.
+
+## Ejemplo 2 (XIII) {.smaller}
+
+Modelo de determinación de los precios de venta de las casas:
+$$
+\log(price) = \beta_0 + \beta_1 \log(sqrft) + \beta_2 \log(lotsize) + \beta_3 bdrms + u
+$$
+Transformamos las variables:
+```{r}
+hprice1 <- within(hprice1, {
+  lprice <- log(price)
+  lsqrft <- log(sqrft)
+  llotsize <- log(lotsize)
+})
+```
+
+
+## Ejemplo 2 (XIV) {.smaller}
+
+Estimación por MCO:
+```{r}
+mod3 <- lm(lprice ~ lsqrft + llotsize + bdrms, data = hprice1)
+coef_table(mod3)
+```
+
+## Ejemplo 2 (XV) {.smaller}
+
+Contraste de White:
+```{r}
+white_test(mod3)
+```

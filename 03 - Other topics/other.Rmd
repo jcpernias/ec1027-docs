@@ -1,0 +1,117 @@
+---
+title: "Otras cuestiones"
+author: "José C. Pernías"
+date: "3/25/2021"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Forma funcional
+
+## Descripción del problema
+
+- ¿Debemos tomar logaritmos? ¿Incluir el cuadrado de algunas explicativas?
+
+## Contrastes
+
+- Contraste $F$.
+
+- RESET: contraste general de mala especificación.
+
+- Contrastes de modelos no anidados.
+
+# Observaciones perdidas
+
+## Descripción del problema
+
+- En algunas observaciones no tenemos los valores de algunas variables.
+
+## Consecuencias
+
+- ¿Qué ha provocado la pérdida de observaciones?
+
+- Existen métodos de **imputación**, pero suelen ser complicados y poco generales.
+
+# Muestras no aleatorias
+
+## Descripción del problema (I)
+
+- Muchos de los resultados que hemos visto dependen del supuesto **RLM.2**.
+
+- En algunos casos, si se incumple **RLM.2** no tiene consecuencias importantes: **muestreo estratificado**. 
+
+## Descripción del problema (II)
+
+Suele haber problemas más serios cuando:
+
+- El muestreo se realiza en función de la variable dependiente.
+
+- Hay una **dependencia**  importante entre las observaciones de la muestra.
+
+
+# Observaciones atípicas y observaciones influyentes
+
+## Descripción del problema
+
+- En una muestra hay observaciones que toman valores muy inusuales de las variables explicativas o de la variable dependiente.
+
+
+## Detección
+
+- Examen de los residuos.
+
+- Gráficos de los residuos frente a las variables explicativas.
+
+## Ejemplo (I)
+
+Modelo de determinación de los precios de venta de las casas:
+$$
+price = \beta_0 + \beta_1 sqrft + \beta_2 lotsize + \beta_3 bdrms + u
+$$
+
+## Ejemplo (II) {.smaller}
+
+Estimación por MCO:
+```{r}
+library(ec1027)
+mod1 <- lm(price ~ sqrft + lotsize + bdrms, data = hprice1)
+coef_table(mod1)
+```
+
+## Ejemplo (III) {.smaller}
+
+```{r} 
+library(ggplot2)
+hprice1$uhat <- resid(mod1)
+qplot(x = lotsize, y = uhat, data = hprice1)
+
+```
+
+## Ejemplo (IV) {.smaller}
+
+Excluimos la casa atípica:
+```{r}
+hprice1b <- subset(hprice1, subset = lotsize < 50000)
+mod2 <- lm(price ~ sqrft + lotsize + bdrms, data = hprice1b)
+coef_table(mod2)
+```
+
+## Ejemplo (V) {.smaller}
+
+```{r} 
+hprice1b$uhat2 <- resid(mod2)
+qplot(x = lotsize, y = uhat2, data = hprice1b)
+
+```
+
+## Ejemplo (VI) {.smaller}
+
+Al eliminar la observación influyente, no se detectan problemas de heteroscedasticidad.
+```{r}
+het_test(mod2)
+```
+
+
