@@ -1,0 +1,113 @@
+---
+title: "Valores ausentes"
+author: "José Pernías"
+date: '`r format(Sys.Date(), "%e de %B de %Y")`'
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    highlight: pygments
+    theme: yeti
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(rmarkdown)
+library(texreg)
+```
+
+<p xmlns:cc="http://creativecommons.org/ns#" >This work by <span property="cc:attributionName">José Pernías</span> is licensed under <a href="http://creativecommons.org/licenses/by-sa/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">CC BY-SA 4.0<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/sa.svg?ref=chooser-v1"></a></p>
+
+
+## Valores ausentes en R
+
+Los valores ausentes, _missing values_, se producen cuando no se dispone de información sobre el valor que toman una o más variables para algunas observaciones de la muestra. 
+
+En R se codifican usando el símbolo `NA` (_not available_):
+```{r}
+Y  <- c( 5,  7,  9,  6,  5,  8,  6)
+X1 <- c(10, 12,  8, NA,  4, 16,  7)
+X2 <- c( 6,  4, NA,  7, NA,  5,  4)
+X3 <- c( 9, 10,  8, 10, 11,  9, 10)
+```
+Con las instrucciones anteriores hemos creado cuatro variables, dos de las cuales tiene valores ausentes.
+
+## Estadísticos descriptivos
+
+Algunas funciones de R, devuelven un valor `NA` cuando hay observaciones ausentes en alguna de las variables. Por ejemplo:
+
+- Media:
+  ```{r}
+  mean(X1)
+  ```
+
+- Coeficiente de correlación:
+  ```{r}
+  cor(Y, X1)
+  ```
+
+Una forma de solventar el problema es descartar las observaciones ausentes. Algunas funciones de R (`mean`, `median`, `sd`, etc.) tienen un argumento `na.rm`. Cuando llamamos a esas funciones añadiendo `na.rm = TRUE`, los cálculos se realizan sin las observaciones ausentes: 
+```{r}
+mean(X1, na.rm = TRUE)
+```
+
+Otras funciones (`cor`, `cov`, etc.) tienen un argumento `use` que determina cómo se tratan las observaciones ausentes. Si llamamos a estas funciones añadiendo `use = "complete.obs"` no se tendrán en cuenta las observaciones con valores ausentes en alguna de las variables:
+```{r}
+cor(Y, X1, use = "complete.obs")
+```
+
+## Regresión
+
+Normalmente al usar variables con valores ausentes en la función `lm`, se eliminan las observaciones incompletas:
+```{r}
+regr <- lm(Y ~ X1 + X2)
+summary(regr)
+```
+Como se puede apreciar en los resultados anteriores, la función `summary` informa de la existencia de valores ausentes y de cuántas observaciones se han eliminado antes de la estimación.
+
+Un problema relativamente frecuente ocurre cuando se quieren comparar modelos que usan diferentes variables y, en consecuencia, el número de observaciones ausentes varía en cada modelo. Por ejemplo, consideremos tres modelos explicativos de la variable `Y`:
+
+- Modelo 1: `Y ~ X1`. Se usarían 6 observaciones después de eliminar el valor ausente en `X1`.
+- Modelo 2: `Y ~ X2`. Quedarían 5 observaciones tras eliminar dos valores ausentes en `X2`.
+- Modelo 3: `Y ~ X3`. Se emplearían 7 observaciones en la estimación.
+
+La comparación de estos modelos mediante medidas de ajuste usuales no sería adecuada: 
+```{r echo=FALSE, results='asis'}
+m1 <- lm(Y ~ X1)
+m2 <- lm(Y ~ X2)
+m3 <- lm(Y ~ X3)
+
+knitreg(list("Modelo 1" = m1, "Modelo 2" = m2, "Modelo 3" = m3),
+        stars = numeric(0),
+        caption = "Comparación de modelos: muestras diferentes")
+```
+En los resultados mostrados en la tabla anterior no podemos asegurar si diferencias en el ajuste se deben a que usamos diferentes variables explicativas o a que usamos diferentes muestras. Los contrastes de selección de modelos, anidados o no, también requieren que todos los modelos rivales se estimen con la misma muestra.
+
+Para eliminar las observaciones problemáticas organizamos las variables de nuestro ejemplo en un `data.frame`:
+```{r}
+df <- data.frame(Y = Y, X1 = X1, X2 = X2, X3 = X3)
+df
+```
+
+Creamos una nueva base de datos sin valores ausentes usando `na.omit`:
+```{r}
+df2 <- na.omit(df)
+df2
+```
+Ahora usamos `df2` para estimar los modelos rivales:
+```{r}
+mod1 <- lm(Y ~ X1, data = df2)
+mod2 <- lm(Y ~ X2, data = df2)
+mod3 <- lm(Y ~ X3, data = df2)
+```
+
+Una vez que usamos la misma muestra para estimar todos los modelos, es posible comparar la medidas bondad del ajuste:
+```{r echo=FALSE, results='asis'}
+knitreg(list("Modelo 1" = mod1, "Modelo 2" = mod2, "Modelo 3" = mod3), 
+        stars = numeric(0),
+        caption = "Comparación de modelos: misma muestra")
+```
+
+
