@@ -18,12 +18,13 @@ library(pander)
 
 ## Crear variables ficticias en R
 
-No siempre obtenemos los datos en el formato en el que lo necesitamos. Por ejemplo, consideremos los siguientes datos:
+No siempre obtenemos los datos en el formato en el que lo necesitamos. Por ejemplo, consideremos los siguientes datos que recogen variables referidas a una muestra de trabajadores:
 ```{r}
 db <- data.frame(
-  wage = c(10, 8, 12, 10, 9),
-  sex = c(1, 2, 2, 1, 2),
-  age = c(42, 23, 35, 30, 26)
+  wage = c(10, 8, 12, 10, 9, NA),
+  age = c(42, 23, 35, 30, 47, 55),
+  sex = c(1, 2, 2, 1, 2, 1),
+  educ = c(4, 1, 2, 3, 2, 4)
 )
 ```
 
@@ -31,47 +32,131 @@ db <- data.frame(
 pander(db)
 ```
 
+La forma en que se presentan estas variables tiene varios problemas:
 
+- `wage`: es el salario, en euros por hora, de los trabajadores de la muestra. El problema con esta variable es la presencia de un valor ausente, `NA`.
 
-En R creamos variables ficticias utilizando expresiones lógicas. Una expresión lógica compara dos valores y devuelve `TRUE` si la expresión es verdadera y `FALSE` si la expresión es false.
+- `age`: es la edad en años. Esta variable puede usarse tal como se presenta, aunque en ocasiones nos puede interesar utilizar variables que indiquen rangos de edad: de 20 a 30 años, de 30 a 40 años, etc.
 
-Por ejemplo, creamos la variable `x` que contiene los números enteros del 1 al 5:
+- `sex`: permite distinguir qué trabajadores son hombres y cuáles son mujeres. En nuestro caso, en las observaciones donde `sex` es igual a 1 corresponden a hombres y cuando `sex` es igual a 2 se trata de mujeres.
+
+- `educ`: recoge el nivel de estudios. En el ejemplo el valor 1 indica estudios primarios, los valores 2 y 3 se corresponden a educación secundaria y el valor 4 indica estudios superiores.
+
+## Variables dicotómicas
+
+Si realizamos una regresión de `wage` con respecto a `sex` obtenemos:
 ```{r}
-x <- 1:5
-x
+lm(wage ~ sex, data = db)
 ```
-
-Podemos crear una nueva variable lógica que sea verdadera cuando `x` sea igual a un valor determinado. Por ejemplo:
+La estimación del parámetro de `sex` mide, en este caso, la diferencia del salario medio de las mujeres con respecto del salario medio de los hombres. Pero esta interpretación no es obvia y sería incorrecta si se hubiesen codificado de forma diferente las observaciones de hombres y mujeres (por ejemplo, hombres con un 3 y mujeres con un 5). Una forma más directa de medir la diferencia de los salarios medios es crear una variable ficticia para las mujeres. Una forma de conseguir esto es mediante la instrucción:
 ```{r}
-y1 <- x == 3
+db$woman <- db$sex == 2
 ```
-crea la variable `x1` que solo toma valor `TRUE` cuando `x` es igual a 3.   
-```{r echo = FALSE}
-pander(data.frame(x, y1))
+donde hemos creado dentro de la base de datos `db` la variable `woman` y hemos almacenado en esta variable el resultado de la expresión lógica `db$sex == 2`. Esa expresión es cierta (`TRUE`) para las observaciones correspondientes a mujeres (donde `sex` es igual a 2) y es falsa (`FALSE`) cuando la observación se refiere a un hombre (y el valor de `sex` es distinto de 2).
+```{r echo=FALSE}
+pander(db[, c("sex", "woman")])
+```
+Aunque la variable `woman` es lógica (toma los valores `TRUE` y `FALSE`) podemos usarla como si fuera numérica. R convierte `TRUE` en 1 y `FALSE` en 0 siempre que sea necesario. Si esimamos la regresión de `wage` con respecto a `woman`:
+```{r}
+lm(wage ~ woman, data = db)
+```
+En esta regresión, la constante sería el salario medio de los hombres y la pendiente la diferencia de los salarios medios de mujeres y hombres.  
+
+## La función `ifelse`
+
+Si no queremos trabajar con variables lógicas podemos usar la función `ifelse`. Esta función toma tres argumentos. El primero es una expresión lógica. El segundo es el valor que tomará nuestra variable cuando la expresión sea verdadera. El tercero determina el valor cuando la expresión sea falsa. Podemos crear una variable `man` con la orden:
+```{r}
+db$man <- ifelse(db$sex == 1, 1, 0)
 ```
 
-Ademas de comprobar si dos valores son iguales con `==`, podemos utilizar otras comparaciones:
+```{r echo=FALSE}
+pander(db[, c("sex", "woman", "man")])
+```
 
-|  Comparación                    |   Expresión lógica  | 
+La regresión de `wage` con respecto a `man` se interpreta de forma análoga a la regresión con respecto a `woman`:
+```{r}
+lm(wage ~ man, dat = db)
+```
+
+Por supuesto, caemos en la trampa de las variables ficticias si incluimos en la misma regresión las variables `man` y `woman` junto con un término constante:
+```{r}
+lm(wage ~ man + woman, dat = db)
+```
+
+## Más de dos categorías
+
+En nuestro ejemplo, tenemos una variable que recoge el nivel de estudios de cada trabajador. Para poder determinar el efecto sobre los salarios es mejor crear una variable ficticia para cada nivel educativo. Podemos crear las variables para los estudios primarios y los superiores de forma parecida a como creamos `man`:
+```{r}
+db$ed_prim <- ifelse(db$educ == 1, 1, 0)
+db$ed_sup <- ifelse(db$educ == 4, 1, 0)
+```
+Pero el caso de la educación secundaria es más complejo ya que se corresponde con dos valores de `educ`. Utilizamos `|` para crear una expresión que es verdadera cuado se cumple una condición **o** cuando se cumple otra. La variable ficticia para la educación secundaria se crea con:
+```{r}
+db$ed_sec <- ifelse(db$educ == 2 | db$educ == 3, 1, 0)
+```
+
+```{r echo=FALSE}
+pander(db[, c("educ", "ed_prim", "ed_sec", "ed_sup")])
+```
+
+## La función `within`
+
+Cuando realizamos muchas transformaciones de variables es pesado repetir constantemente el nombre de la base de datos. Con la función `within` podemos simplificar la creación de variables. El primer argumento es la base de datos con la que queremos trabajar. El segundo argumento es una secuencia de expresiones encerradas entre llaves. Todas las variables que creemos se guardarán en la base de datos automáticamente. El resultado de `within` es una base de datos actualizada con las variables que hemos creado. Volvemos a crear las variables de educación de la sección anterior con la función `within`:
+```{r}
+db <- within(db, {
+  ed_prim <- ifelse(educ == 1, 1, 0)
+  ed_sec  <- ifelse(educ == 2 | educ == 3, 1, 0)
+  ed_sup  <- ifelse(educ == 4, 1, 0)
+})
+```
+Hemos guardado el resultado de `within` en la misma base de datos `db`, reemplazandola con una nueva versión que incluye las variables recién creadas.
+
+```{r echo=FALSE}
+pander(db[, c("educ", "ed_prim", "ed_sec", "ed_sup")])
+```
+
+## Más expresiones lógicas
+
+Ahora vamos a codificar la variable `age` en tres categorías:
+
+- `age1`: igual o menos de 30 años.
+- `age2`: más de 30 años y 45 años o menos.
+- `age3`: más de 45 años.
+
+En R disponemos de los siguientes operadores lógicos:
+
+|  Condición                      |   Expresión lógica  | 
 |:--------------------------------|:--------------------|
-| `x` es igual a `y`              |      `x == y`       |
-| `x` es distinto de `y`          |      `x != y`       |
-| `x` es mayor que `y`            |      `x > y`        |
-| `x` es mayor o igual que `y`    |      `x >= y`       |
-| `x` es menor que `y`            |      `x < y`        |
-| `x` es menor o igual que `y`    |      `x <= y`       |
+| `a` es igual a `b`              |      `a == b`       |
+| `a` es distinto de `b`          |      `a != b`       |
+| `a` es mayor que `b`            |      `a > b`        |
+| `a` es mayor o igual que `b`    |      `a >= b`       |
+| `a` es menor que `b`            |      `a < b`        |
+| `a` es menor o igual que `b`    |      `a <= b`       |
+| `a` o `b`                       |      `a | b`        |
+| `a` y `b`                       |      `a & b`        |
+| no `a`                          |      `!a`           |
 
-Si utilizamos dos vectores, se comparan elemento a elemento. Por ejemplo, creamos otra variable `y`:
+Entonces, la siguiente instrucción añade las categorias de edad que describimos antes a la base de datos:
 ```{r}
-y <- c(5, 3, 2, 4, 1)
-```
-y la comparamos con `x`:
-```{r echo = FALSE}
-df <- tibble::tibble(x = x, y = y, 
-           `x > y` = x > y,  
-           `x >= y` = x >= y)
-pander(df)
+db <- within(db, {
+  age1 <- ifelse(age <= 30, 1, 0)
+  age2 <- ifelse(age > 30 & age <= 45, 1, 0)
+  age3 <- ifelse(age > 45, 1, 0)
+})
 ```
 
-También podemos combinar el resultado de varias expresiones lógicas usando `&`. De esta forma, el resultado sólo será verdadero si todas las expresiones combinadas también lo son. Por ejemplo, podemos crear una variable que sea verdadera 
+```{r echo=FALSE}
+pander(db[, c("age", "age1", "age2", "age3")])
+```
 
+Por último hay muchas funciones de R que devuelven variables lógicas. Una función que a veces es útil para eliminar valores ausentes es `is.na(x)` que devuelve `TRUE` para aquellos valores de `x` que no están disponibles. La instrucción:
+```{r}
+db <- subset(db, !is.na(wage))
+```
+sobrescribe `db` con el resultado de `subset`. Esta función devuelve las observaciones de una base de datos, en nuestro caso `db`, que cumplen una condición, en nuestro caso `!is.na(wage)` que podemos leer como 'no es un valor ausente de la variable `wage`'. En conclusión, esa última expresión eliminaría todas las observaciones para las que falta el salario.
+
+Después de todas las transformaciones que hemos realizado, la base de datos quedaría:
+```{r echo=FALSE}
+pander(db)
+```
