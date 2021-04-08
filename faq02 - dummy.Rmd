@@ -1,0 +1,77 @@
+---
+title: "Variables ficticias"
+author: "José Pernías"
+date: '`r format(Sys.Date(), "%e de %B de %Y")`'
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    highlight: pygments
+    theme: yeti
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(pander)
+```
+
+## Crear variables ficticias en R
+
+No siempre obtenemos los datos en el formato en el que lo necesitamos. Por ejemplo, consideremos los siguientes datos:
+```{r}
+db <- data.frame(
+  wage = c(10, 8, 12, 10, 9),
+  sex = c(1, 2, 2, 1, 2),
+  age = c(42, 23, 35, 30, 26)
+)
+```
+
+```{r echo=FALSE}
+pander(db)
+```
+
+
+
+En R creamos variables ficticias utilizando expresiones lógicas. Una expresión lógica compara dos valores y devuelve `TRUE` si la expresión es verdadera y `FALSE` si la expresión es false.
+
+Por ejemplo, creamos la variable `x` que contiene los números enteros del 1 al 5:
+```{r}
+x <- 1:5
+x
+```
+
+Podemos crear una nueva variable lógica que sea verdadera cuando `x` sea igual a un valor determinado. Por ejemplo:
+```{r}
+y1 <- x == 3
+```
+crea la variable `x1` que solo toma valor `TRUE` cuando `x` es igual a 3.   
+```{r echo = FALSE}
+pander(data.frame(x, y1))
+```
+
+Ademas de comprobar si dos valores son iguales con `==`, podemos utilizar otras comparaciones:
+
+|  Comparación                    |   Expresión lógica  | 
+|:--------------------------------|:--------------------|
+| `x` es igual a `y`              |      `x == y`       |
+| `x` es distinto de `y`          |      `x != y`       |
+| `x` es mayor que `y`            |      `x > y`        |
+| `x` es mayor o igual que `y`    |      `x >= y`       |
+| `x` es menor que `y`            |      `x < y`        |
+| `x` es menor o igual que `y`    |      `x <= y`       |
+
+Si utilizamos dos vectores, se comparan elemento a elemento. Por ejemplo, creamos otra variable `y`:
+```{r}
+y <- c(5, 3, 2, 4, 1)
+```
+y la comparamos con `x`:
+```{r echo = FALSE}
+df <- tibble::tibble(x = x, y = y, 
+           `x > y` = x > y,  
+           `x >= y` = x >= y)
+pander(df)
+```
+
+También podemos combinar el resultado de varias expresiones lógicas usando `&`. De esta forma, el resultado sólo será verdadero si todas las expresiones combinadas también lo son. Por ejemplo, podemos crear una variable que sea verdadera 
+
