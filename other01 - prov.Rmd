@@ -1,0 +1,49 @@
+---
+title: "Estadísticas de las provincias de España"
+author: "José Pernías"
+date: '`r format(Sys.Date(), "%e de %B de %Y")`'
+output: 
+  html_document: 
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+    highlight: pygments
+    theme: yeti
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Demografía
+
+  - [Población](https://www.ine.es/dynt3/inebase/es/index.htm?padre=517&capsel=522).
+  - [Matrimonios](https://www.ine.es/dyngs/INEbase/es/operacion.htm?c=Estadistica_C&cid=1254736176999&menu=resultados&idp=1254735573002#!tabs-1254736195549).
+  - [Natalidad, fecundidad y mortalidad](https://www.ine.es/dyngs/INEbase/es/operacion.htm?c=Estadistica_C&cid=1254736177003&menu=resultados&idp=1254735573002).
+  - [Flujos migratorios](https://www.ine.es/dyngs/INEbase/es/operacion.htm?c=Estadistica_C&cid=1254736177000&menu=resultados&idp=1254735573002#!tabs-1254736195609)
+
+## Macromagnitudes
+
+  - [PIB y PIB per capita](https://www.ine.es/dyngs/INEbase/es/operacion.htm?c=Estadistica_C&cid=1254736167628&menu=resultados&idp=1254735576581)
+  
+## Mercado laboral
+
+  - [Tasas de actividad, paro y empleo](https://www.ine.es/dynt3/inebase/es/index.htm?padre=996&capsel=997)
+
+## Servicios
+
+  - [Hoteles](https://www.ine.es/dyngs/INEbase/es/operacion.htm?c=Estadistica_C&cid=1254736177015&menu=resultados&idp=1254735576863).
+  
+## Precios
+
+  - Los IPC provinciales **no** se pueden utilizar para comparar los precios en diferentes provincias. Sólo se pueden usar par ver cómo evolucionan en el tiempo los precios de una determinada provincia. Los índices de precios de la vivienda tienen el mismo problema.
+  
+## Vivienda
+  - [Parque de viviendas, valor tasado de la vivienda, precio del suelo, etc](https://www.mitma.gob.es/informacion-para-el-ciudadano/informacion-estadistica/vivienda-y-actuaciones-urbanas/estadisticas/vivienda-y-suelo).
+  
+## Sociedad
+  - [Estadisticas de seguridad y justicia](https://www.ine.es/dyngs/INEbase/es/categoria.htm?c=Estadistica_P&cid=1254735573206)
+
+## Transportes
+  - [Matriculaciones de vehículos, pqrque de vehículos, permisos de conducción, accidentes, etc](https://www.dgt.es/es/seguridad-vial/estadisticas-e-indicadores/).
